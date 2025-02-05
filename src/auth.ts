@@ -11,7 +11,7 @@ const nextAuth = NextAuth({
   },
   secret: process.env.AUTH_SECRET,
   pages: {
-    signIn: "/auth/signin",
+    signIn: "/signin",
   },
   providers: [
     Credentials({
@@ -25,7 +25,6 @@ const nextAuth = NextAuth({
         const { email, password } = parsedCredentials.output;
 
         const user = await findUserByEmail(email);
-        console.log("here");
 
         if (!user) return null;
         if (!user.password) return null;
@@ -48,4 +47,4 @@ const nextAuth = NextAuth({
   ],
 });
 
-export const { signIn, auth, signOut } = nextAuth;
+export const { signIn, auth, signOut, handlers } = nextAuth;

@@ -1,10 +1,14 @@
-"use server";
-import { signOut } from "@/auth";
+// "use server";
 
-export async function signOutUserAction() {
-  try {
-    await signOut({ redirect: false });
-  } catch (error) {
-    console.error(error);
-  }
-}
+// import { signOut } from "@/auth";
+// import { redirect } from "next/navigation";
+
+// export async function signOutUserAction() {
+//   try {
+//     await signOut();
+//   } catch (err) {
+//     console.error(err);
+//   } finally {
+//     redirect("/signin");
+//   }
+// }

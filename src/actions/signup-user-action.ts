@@ -21,13 +21,6 @@ export async function signUpUserAction(values: unknown): Promise<Res> {
 
   const { domainName, email, password } = parsedValues.output;
 
-  console.log({
-    success: true,
-    domainName,
-    email,
-    password,
-  });
-
   try {
     const exists = await db
       .select({ id: users.id })
@@ -56,7 +49,7 @@ export async function signUpUserAction(values: unknown): Promise<Res> {
     const hashedPassword = await argon2.hash(password);
 
     // Insert the user into the database
-    const newUser = await db
+    await db
       .insert(users)
       .values({
         domain: domainName,
@@ -66,7 +59,6 @@ export async function signUpUserAction(values: unknown): Promise<Res> {
       .returning({
         id: users.id,
       });
-    console.log(newUser);
 
     return { success: true };
   } catch (error) {
