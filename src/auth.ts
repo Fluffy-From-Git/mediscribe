@@ -25,7 +25,6 @@ const nextAuth = NextAuth({
         const { email, password } = parsedCredentials.output;
 
         const user = await findUserByEmail(email);
-
         if (!user) return null;
         if (!user.password) return null;
         if (

@@ -38,6 +38,28 @@ export const users = pgTable(
   }),
 );
 
+export const clients = pgTable("client", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  name: text("name"),
+  address: text("address").notNull(),
+});
+
+export const shifts = pgTable("shift", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  userId: text("userId")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  clientId: text("clientId")
+    .notNull()
+    .references(() => clients.id, { onDelete: "cascade" }),
+  start: timestamp("start", { mode: "date" }).notNull(),
+  end: timestamp("end", { mode: "date" }).notNull(),
+});
+
 export const adminUserEmailAddresses = pgTable(
   "adminUserEmailAddresses",
   {

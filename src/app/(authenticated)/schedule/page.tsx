@@ -8,16 +8,32 @@ import {
   ChevronRightIcon,
   EllipsisHorizontalIcon,
 } from "@heroicons/react/20/solid";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import WeekNavigator from "../_components/weekNavigator";
 import { useDateStore } from "@/lib/store";
 import { SelectSingleEventHandler } from "react-day-picker";
+import { useSession } from "next-auth/react";
+import { getShifts } from "./_components/shifts";
 
 export default function Example() {
   const container = useRef<HTMLDivElement | null>(null);
   const containerNav = useRef<HTMLDivElement | null>(null);
   const containerOffset = useRef<HTMLDivElement | null>(null);
   const { date, setDate } = useDateStore();
+  const { data: session } = useSession();
+  const [shifts, setShifts] = useState<
+    | { clientName: string | null; start: Date; end: Date; address: string }[]
+    | null
+  >(null);
+
+  useEffect(() => {
+    const fetchShifts = async () => {
+      if (!session?.user?.email) return;
+      const shifts = await getShifts(session.user.email, date);
+      setShifts(shifts);
+    };
+    fetchShifts();
+  }, [session, date]);
 
   useEffect(() => {
     // Set the container scroll position based on the current time.
@@ -32,13 +48,20 @@ export default function Example() {
       1440;
   }, []);
 
+  const calculateStartRow = (time: Date) => {
+    const hour = time.getHours();
+    const minute = time.getMinutes();
+    console.log(hour, minute);
+    console.log(2 + hour * 12 + (minute / 60) * 12);
+    return 2 + hour * 12 + (minute / 60) * 12;
+  };
+
   return (
     <div className="flex h-full max-h-dvh flex-col">
       <header className="flex flex-none items-center justify-between border-b border-gray-200 px-6 py-4">
         <div>
           <h1 className="text-base font-semibold text-gray-900">
             <time className="sm:hidden">
-              {/* Jan 22, 2022 */}
               {date?.toLocaleDateString(undefined, {
                 month: "short",
                 day: "2-digit",
@@ -211,7 +234,10 @@ export default function Example() {
         </div>
       </header>
       <div className="isolate flex flex-auto overflow-hidden bg-white">
-        <div ref={container} className="flex flex-auto flex-col overflow-auto">
+        <div
+          ref={container}
+          className="flex h-[calc(100vh-10rem)] flex-auto flex-col overflow-auto"
+        >
           <WeekNavigator ref={containerNav} />
           <div className="flex w-full flex-auto">
             <div className="w-14 flex-none bg-white ring-1 ring-gray-100" />
@@ -375,6 +401,44 @@ export default function Example() {
                   gridTemplateRows: "1.75rem repeat(288, minmax(0, 1fr)) auto",
                 }}
               >
+                {shifts?.map((shift, index) => {
+                  console.log(shift?.rowStart);
+                  return (
+                    <li
+                      key={index} // Or use a unique ID from your shift data
+                      className="relative mt-px flex"
+                      style={{
+                        gridRow: `${237} / span ${shift?.span}`,
+                      }}
+                    >
+                      <a
+                        href="#" // Add link if needed
+                        className="group absolute inset-1 flex flex-col overflow-y-auto rounded-lg bg-blue-50 p-2 text-xs/5 hover:bg-blue-100"
+                      >
+                        <p className="order-2 font-semibold text-blue-700">
+                          {shift.clientName}
+                        </p>
+                        <p className="order-1 text-blue-500 group-hover:text-blue-700">
+                          {shift.address}
+                        </p>
+                        <p className="text-blue-500 group-hover:text-blue-700">
+                          {/* in 24 hour time e.g 0600 - 1200 */}
+                          <time dateTime={shift.start.toISOString()}>
+                            {shift.start.toLocaleTimeString(undefined, {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}{" "}
+                            -{" "}
+                            {shift.end.toLocaleTimeString(undefined, {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </time>
+                        </p>
+                      </a>
+                    </li>
+                  );
+                })}
                 <li
                   className="relative mt-px flex"
                   style={{ gridRow: "74 / span 12" }}
