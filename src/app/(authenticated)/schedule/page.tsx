@@ -15,6 +15,51 @@ import { SelectSingleEventHandler } from "react-day-picker";
 import { useSession } from "next-auth/react";
 import { getShifts } from "./_components/shifts";
 
+const calculateStartRow = (time: Date) => {
+  const hour = time.getHours();
+  const minute = time.getMinutes();
+  return Math.floor(2 + hour * 12 + minute / 5);
+};
+
+const calculateSpan = (start: Date, end: Date) => {
+  const diffMs = end.getTime() - start.getTime();
+  const diffMinutes = diffMs / (1000 * 60);
+  return Math.floor(diffMinutes / 5);
+};
+
+export function getDateShift(shifts, date: Date) {
+  if (!shifts) {
+    return null;
+  }
+  const startOfDay = new Date(date);
+  startOfDay.setHours(0, 0, 0, 0);
+
+  const endOfDay = new Date(date);
+  endOfDay.setHours(23, 59, 59, 999);
+
+  const shiftsOnSelectedDate = shifts
+    .filter((shift) => {
+      return (
+        shift.start &&
+        shift.end &&
+        shift.end >= startOfDay &&
+        shift.start <= endOfDay
+      );
+    })
+    .map((shift) => {
+      const clampedStart = shift.start < startOfDay ? startOfDay : shift.start;
+      const clampedEnd = shift.end > endOfDay ? endOfDay : shift.end;
+
+      return {
+        ...shift,
+        rowStart: calculateStartRow(clampedStart),
+        span: calculateSpan(clampedStart, clampedEnd),
+      };
+    });
+
+  return shiftsOnSelectedDate;
+}
+
 export default function Example() {
   const container = useRef<HTMLDivElement | null>(null);
   const containerNav = useRef<HTMLDivElement | null>(null);
@@ -22,18 +67,41 @@ export default function Example() {
   const { date, setDate } = useDateStore();
   const { data: session } = useSession();
   const [shifts, setShifts] = useState<
-    | { clientName: string | null; start: Date; end: Date; address: string }[]
+    | {
+        clientName: string | null;
+        start: Date;
+        end: Date;
+        address: string;
+      }[]
+    | null
+  >(null);
+
+  const [currShifts, setCurrShifts] = useState<
+    | {
+        clientName: string | null;
+        start: Date;
+        end: Date;
+        address: string;
+        rowStart: number | null;
+        span: number | null;
+      }[]
     | null
   >(null);
 
   useEffect(() => {
     const fetchShifts = async () => {
       if (!session?.user?.email) return;
-      const shifts = await getShifts(session.user.email, date);
+      const shifts = await getShifts(session.user.email);
       setShifts(shifts);
     };
     fetchShifts();
-  }, [session, date]);
+  }, [session]);
+
+  useEffect(() => {
+    if (!session?.user?.email) return;
+    const currShifts = getDateShift(shifts, date);
+    setCurrShifts(currShifts);
+  }, [session, date, shifts]);
 
   useEffect(() => {
     // Set the container scroll position based on the current time.
@@ -47,14 +115,6 @@ export default function Example() {
         currentMinute) /
       1440;
   }, []);
-
-  const calculateStartRow = (time: Date) => {
-    const hour = time.getHours();
-    const minute = time.getMinutes();
-    console.log(hour, minute);
-    console.log(2 + hour * 12 + (minute / 60) * 12);
-    return 2 + hour * 12 + (minute / 60) * 12;
-  };
 
   return (
     <div className="flex h-full max-h-dvh flex-col">
@@ -401,14 +461,13 @@ export default function Example() {
                   gridTemplateRows: "1.75rem repeat(288, minmax(0, 1fr)) auto",
                 }}
               >
-                {shifts?.map((shift, index) => {
-                  console.log(shift?.rowStart);
+                {currShifts?.map((shift, index) => {
                   return (
                     <li
                       key={index} // Or use a unique ID from your shift data
                       className="relative mt-px flex"
                       style={{
-                        gridRow: `${237} / span ${shift?.span}`,
+                        gridRow: `${shift?.rowStart} / span ${shift?.span}`,
                       }}
                     >
                       <a
@@ -439,7 +498,7 @@ export default function Example() {
                     </li>
                   );
                 })}
-                <li
+                {/* <li
                   className="relative mt-px flex"
                   style={{ gridRow: "74 / span 12" }}
                 >
@@ -492,7 +551,7 @@ export default function Example() {
                       <time dateTime="2022-01-22T11:00">11:00 AM</time>
                     </p>
                   </a>
-                </li>
+                </li> */}
               </ol>
             </div>
           </div>
